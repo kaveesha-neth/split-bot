@@ -24,6 +24,10 @@ OUTPUT_DIR   = Path(os.environ.get("OUTPUT_DIR",   "/tmp/tgbot/output"))
 SPLIT_SIZE_MB = int(os.environ.get("SPLIT_SIZE_MB", "1000"))   # ~1 GB
 MIN_SIZE_MB   = int(os.environ.get("MIN_SIZE_MB",   "1000"))   # only process files >= this
 
+ALLOWED_USERS = set(
+    int(x.strip()) for x in os.environ.get("ALLOWED_USER_IDS", "").split(",") if x.strip()
+)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -101,13 +105,17 @@ async def compress_and_split(input_path: Path, output_dir: Path, base_name: str,
 
 @client.on(events.NewMessage(pattern="/start"))
 async def handle_start(event):
-    await event.reply(
-        "👋 **Large File Splitter Bot**\n\n"
-        f"Send me any file **≥ {MIN_SIZE_MB} MB** and I will:\n"
-        f"1. Download it to the server\n"
-        f"2. Compress & split it into **{SPLIT_SIZE_MB} MB** RAR parts\n"
-        f"3. Send all parts back to you\n\n"
-        "Just drop the file here!"
+    if ALLOWED_USERS and event.sender_id not in ALLOWED_USERS:
+        await event.reply("⛔ You are not authorized to use this bot.")
+        return
+    else:
+        await event.reply(
+            "👋 **Large File Splitter Bot**\n\n"
+            f"Send me any file **≥ {MIN_SIZE_MB} MB** and I will:\n"
+            f"1. Download it to the server\n"
+            f"2. Compress & split it into **{SPLIT_SIZE_MB} MB** RAR parts\n"
+            f"3. Send all parts back to you\n\n"
+            "Just drop the file here!"
     )
 
 
@@ -119,6 +127,10 @@ async def handle_help(event):
 @client.on(events.NewMessage())
 async def handle_file(event):
     msg = event.message
+
+    if ALLOWED_USERS and event.sender_id not in ALLOWED_USERS:
+        await event.reply("⛔ You are not authorized to use this bot.")
+        return
 
     # Must have a document
     if not msg.document:
