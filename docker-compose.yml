@@ -1,0 +1,27 @@
+services:
+  tg-split-bot:
+    build: .
+    image: tg-split-bot:latest
+    restart: unless-stopped
+    environment:
+      TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
+      TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
+      SPLIT_SIZE_MB: "${SPLIT_SIZE_MB:-1000}"
+      MIN_SIZE_MB: "${MIN_SIZE_MB:-1000}"
+    volumes:
+      # Bind-mount for temp files — swap to a larger disk path if needed
+      - tgbot_tmp:/tmp/tgbot
+      # Persist the Telethon session so you don't re-auth on restart
+      - tgbot_session:/app
+    # Give the container plenty of room for large files
+    tmpfs: []           # leave empty; actual storage is the named volume above
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  tgbot_tmp:
+  tgbot_session:
